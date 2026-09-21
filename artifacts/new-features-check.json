@@ -1,0 +1,8 @@
+{
+  "dpapi_roundtrip": true,
+  "windows_profile_create_status": true,
+  "windows_profile_removed": true,
+  "windows_ocr_synthetic_image": true,
+  "sendinput_unicode_exact": true,
+  "ok": true
+}

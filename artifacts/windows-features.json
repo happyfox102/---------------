@@ -1,0 +1,18 @@
+{
+  "programs": 344,
+  "catalog_error": "",
+  "brightness_set": 99,
+  "brightness_read": 99,
+  "brightness_restored": 100,
+  "saver": "Выбран режим питания «Максимальная энергоэффективность».",
+  "performance": "Выбран режим питания «Максимальная производительность».",
+  "power_restored": true,
+  "screen-check": [
+    1920,
+    1080
+  ],
+  "active-window-check": [
+    1456,
+    908
+  ]
+}

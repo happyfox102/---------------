@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "cpu": 36.8,
+  "gpu": 4.0,
+  "cameras": [
+    "Integrated Webcam"
+  ],
+  "screen_recording": {
+    "path": "C:\\Users\\Alex Arzumanyan\\Desktop\\ии пятница\\data\\recordings\\2026-09-16 14-39-00.mp4",
+    "frames": 51,
+    "decoded": 5,
+    "width": 1280,
+    "height": 720
+  },
+  "camera_recording": {
+    "path": "C:\\Users\\Alex Arzumanyan\\Desktop\\ии пятница\\data\\recordings\\2026-09-16 14-39-07.mp4",
+    "frames": 49,
+    "decoded": 5,
+    "width": 1280,
+    "height": 720
+  }
+}

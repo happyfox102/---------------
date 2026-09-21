@@ -1,0 +1,31 @@
+{
+  "answer": "Вопрос: python official documentation\n\nОтвет:\n\nОфициальная документация Python доступна на сайте [https://docs.python.org/](https://docs.python.org/), где представлены материалы по версии Python 3.14.7 [2]. Сайт содержит следующие разделы:\n\n- «What's new in Python 3.14?» — обновления в версии 3.14 [2].\n- «Tutorial» — введение в синтаксис и функции языка [2].\n- «Library reference» — описание стандартной библиотеки [2].\n- «Language reference» — подробное описание синтаксиса и элементов языка [2].\n- «How to install, configure, and use Python» — инструкции по установке и использованию [2].\n- «Python HOWTOs» — практические руководства [2].\n- «Python Packaging User Guide» — информация о пакетах и PyPI [2].\n- «C API reference» — документация для разработчиков, работающих с C/C++ [2].\n- «FAQs» — часто задаваемые вопросы [2].\n- «Contributing to Python» — информация о том, как участвовать в развитии проекта [2].\n\nДокументация также включает индекс модулей, глобальный индекс, словарь терминов и поисковую систему [2].\n\nИсточники:\n1. Our Documentation | Python.org\nhttps://www.python.org/doc/\n2. Python 3.14.7 documentation\nhttps://docs.python.org/\n3. The Python Tutorial — Python 3.14.7 documentation\nhttps://docs.python.org/3/tutorial/index.html\n4. Welcome to Python.org\nhttps://www.python.org/\n5. Python Documentation\nhttps://wiki.python.org/moin/PythonDocumentation\n6. 3.14.7 Documentation\nhttps://docs.python.org/3/",
+  "sources": [
+    {
+      "url": "https://www.python.org/doc/",
+      "title": "Our Documentation | Python.org"
+    },
+    {
+      "url": "https://docs.python.org/",
+      "title": "Python 3.14.7 documentation"
+    },
+    {
+      "url": "https://docs.python.org/3/tutorial/index.html",
+      "title": "The Python Tutorial — Python 3.14.7 documentation"
+    },
+    {
+      "url": "https://www.python.org/",
+      "title": "Welcome to Python.org"
+    },
+    {
+      "url": "https://wiki.python.org/moin/PythonDocumentation",
+      "title": "Python Documentation"
+    },
+    {
+      "url": "https://docs.python.org/3/",
+      "title": "3.14.7 Documentation"
+    }
+  ],
+  "model": "qwen3:4b-instruct-2507-q4_K_M",
+  "ok": true
+}

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+models/
+build/
+dist/
+*.spec
+.pytest_cache/
+wheelhouse/
+runtime/

@@ -1,0 +1,11 @@
+PyQt6>=6.9,<7
+SpeechRecognition[audio]>=3.14,<4
+pywin32>=308; sys_platform == 'win32'
+pycaw>=20240210; sys_platform == 'win32'
+openpyxl>=3.1.5,<4
+python-docx>=1.1.2,<2
+vosk>=0.3.45,<0.4
+requests>=2.32,<3
+psutil>=6,<8
+lxml>=5,<7
+websocket-client>=1.8,<2
