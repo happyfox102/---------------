@@ -8,6 +8,7 @@ except ImportError:
 
 DEFAULTS = {"background": "#10151f", "accent": "#73dfc1", "font": "Segoe UI", "size": 14, "compact": False, "sidebar": False}
 GLYPHS = {
+    "plus": '<path d="M12 4v16M4 12h16"/>',
     "globe": '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 7h14M5 17h14"/>',
     "settings": '<circle cx="12" cy="12" r="3"/><path d="M10 3h4l1 3 3 1 3 3v4l-3 1-1 3-3 3h-4l-1-3-3-1-3-3v-4l3-1 1-3z"/>',
     "camera": '<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m8 6 2-3h4l2 3"/><circle cx="12" cy="13" r="4"/>',

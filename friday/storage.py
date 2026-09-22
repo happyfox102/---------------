@@ -6,6 +6,7 @@ import os
 import re
 import threading
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -13,22 +14,38 @@ from .paths import ROOT
 
 class ChatDatabase:
     """Fast local SQLite history with searchable messages and chat sections."""
+    @contextmanager
+    def connection(self):
+        db = sqlite3.connect(self.path)
+        try:
+            with db: yield db
+        finally:
+            db.close()
     def __init__(self, root):
         self.path = Path(root) / 'data' / 'chats.sqlite3'; self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
+        with self.connection() as db:
             db.execute('CREATE TABLE IF NOT EXISTS chats(id INTEGER PRIMARY KEY, name TEXT UNIQUE, tone TEXT DEFAULT "friendly", position INTEGER DEFAULT 0)')
             db.execute('CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY, chat_id INTEGER, role TEXT, text TEXT, created TEXT)')
             db.execute('CREATE INDEX IF NOT EXISTS messages_text ON messages(text)')
             db.execute('INSERT OR IGNORE INTO chats(name,position) VALUES("Общая",0)')
     def current(self):
-        with sqlite3.connect(self.path) as db:
+        with self.connection() as db:
             return db.execute('SELECT id,name,tone FROM chats ORDER BY position,id').fetchall()
     def add(self, chat, role, text, created):
-        with sqlite3.connect(self.path) as db:
+        with self.connection() as db:
             row=db.execute('SELECT id FROM chats WHERE name=?',(chat,)).fetchone(); cid=row[0] if row else db.execute('INSERT INTO chats(name) VALUES(?)',(chat,)).lastrowid
             db.execute('INSERT INTO messages(chat_id,role,text,created) VALUES(?,?,?,?)',(cid,role,text,created))
     def search(self, query):
-        with sqlite3.connect(self.path) as db: return db.execute('SELECT c.name,m.role,m.text,m.created FROM messages m JOIN chats c ON c.id=m.chat_id WHERE m.text LIKE ? ORDER BY m.id DESC LIMIT 100',('%'+query+'%',)).fetchall()
+        with self.connection() as db: return db.execute('SELECT c.name,m.role,m.text,m.created FROM messages m JOIN chats c ON c.id=m.chat_id WHERE m.text LIKE ? ORDER BY m.id DESC LIMIT 100',('%'+query+'%',)).fetchall()
+
+    def messages(self, name):
+        with self.connection() as db:
+            return [dict(role=r[0], text=r[1], time=r[2]) for r in db.execute('SELECT role,text,created FROM messages WHERE chat_id=(SELECT id FROM chats WHERE name=?) AND text<>? ORDER BY id', (name, ''))]
+
+    def delete(self, name):
+        with self.connection() as db:
+            db.execute('DELETE FROM messages WHERE chat_id=(SELECT id FROM chats WHERE name=?)', (name,))
+            db.execute('DELETE FROM chats WHERE name=?', (name,))
 
 
 def defaults(root: Path) -> dict:
@@ -56,6 +73,10 @@ class Store:
         self.lock = threading.RLock()
         self.config = defaults(self.root)
         self.config.update(self.read("settings.json", {}))
+        if 'language' not in self.config:
+            language_file = self.root / 'language.txt'
+            language = language_file.read_text(encoding='utf-8-sig').strip() if language_file.exists() else 'ru'
+            self.config['language'] = language if language in ('ru','en','hy') else 'ru'
         # Saved absolute model paths must survive moving the portable folder.
         if not Path(self.config["vosk_model"]).is_dir():
             bundled = self.root / "models/vosk-model-small-ru-0.22"

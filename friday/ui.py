@@ -157,6 +157,13 @@ class Settings(QDialog):
         self.chat_side = QComboBox(); self.chat_side.addItem('Слева', 'left'); self.chat_side.addItem('Справа', 'right'); self.chat_side.setCurrentIndex(max(0, self.chat_side.findData(store.config.get('chat_panel_side','left')))); chat_form.addRow('Расположение истории чатов', self.chat_side)
         chat_form.addRow(QLabel('История хранится локально в SQLite. Разделы создаются кнопкой плюс.'))
         tabs.addTab(chats, glyph('chat'), 'Чаты')
+        language_page = QWidget(); language_form = QFormLayout(language_page)
+        self.language = QComboBox()
+        from .localization import LANGUAGES
+        for code, name in LANGUAGES.items(): self.language.addItem(name, code)
+        self.language.setCurrentIndex(max(0, self.language.findData(store.config.get('language','ru'))))
+        language_form.addRow('Язык интерфейса', self.language)
+        tabs.addTab(language_page, glyph('globe'), 'Язык')
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         buttons.button(QDialogButtonBox.StandardButton.Save).setText("Сохранить")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Отмена")
@@ -228,6 +235,7 @@ class Settings(QDialog):
                 raise ValueError("Укажите адрес Ollama, например http://127.0.0.1:11434.")
             config = self.store.config.copy()
             config.update(self.cloud.values())
+            config['language'] = self.language.currentData()
             config.update(speech_backend=self.backend.currentData(), microphone=self.mic.currentData() if self.devices_ready else self.store.config["microphone"],
                           voice_id=self.voice.currentData() if self.devices_ready else self.store.config.get("voice_id", ""), speech_rate=self.rate.value(),
                           vosk_model=self.vosk.text().strip(), whisper_model=self.whisper.text().strip(),
@@ -283,7 +291,7 @@ class Window(QMainWindow):
         db_rows = self.chat_db.current()
         if db_rows:
             self.chat_name = db_rows[0][1]
-        self.setWindowTitle("Пятница • личный помощник")
+        self.setWindowTitle("ИИ пятница 1.0 (бета)")
         self.setWindowIcon(icon())
         self.engine.file_index.refresh()
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
@@ -319,7 +327,7 @@ class Window(QMainWindow):
         outer.setContentsMargins(24, 18, 24, 18)
         outer.setSpacing(10)
         header = QHBoxLayout()
-        title = QLabel("Пятница")
+        title = QLabel("ИИ пятница")
         title.setObjectName("brand")
         header.addWidget(title)
         subtitle = QLabel("Личный помощник")
@@ -379,7 +387,8 @@ class Window(QMainWindow):
         column.setContentsMargins(0, 0, 10, 0)
         self.tabs = QTabWidget()
         self.chat_select = QComboBox(); self.chat_select.currentTextChanged.connect(self.switch_chat); self.chat_select.setVisible(False)
-        self.dialogue = QTextBrowser()
+        from .chat_view import ChatView
+        self.dialogue = ChatView()
         self.dialogue.setStyleSheet('QTextBrowser { font-size: 16px; padding: 12px; }')
         self.dialogue.setOpenExternalLinks(False)
         self.dialogue.anchorClicked.connect(lambda url: self.submit('открой ссылку '+url.toString()) if url.scheme() in ('http','https') else None)
@@ -499,10 +508,14 @@ class Window(QMainWindow):
 
     def apply_design(self):
         apply_theme(QApplication.instance(), self.store.config)
+        from .localization import install
+        install(QApplication.instance(), self.store.config)
         self.quick_panel.setVisible(palette(self.store.config)['sidebar'])
         self.dialogue.clear()
         for item in self.history:
-            self.render_message(item['role'], item['text'])
+            self.render_message(item['role'], item['text'], item.get('time'))
+        if hasattr(self, 'chat_area'):
+            self.chat_area.insertWidget(0 if self.store.config.get('chat_panel_side','left')=='left' else 1, self.chat_panel)
 
     def toggle_panel(self):
         design = palette(self.store.config)
@@ -606,11 +619,13 @@ class Window(QMainWindow):
             elif action == "restore":
                 self.pc.run_job(self.pc.optimizer.restore)
 
-    def render_message(self, role, text):
+    def render_message(self, role, text, created=None):
         chunks=re.split(r'(https?://[^\s<>"\)]+)',text)
         content=''.join('<a href="'+html.escape(chunk,quote=True)+'">'+html.escape(chunk)+'</a>'
                         if i%2 else html.escape(chunk) for i,chunk in enumerate(chunks))
-        stamp = datetime.now().strftime('%H:%M')
+        stamp = datetime.fromisoformat(created).strftime('%H:%M') if created else datetime.now().strftime('%H:%M')
+        self.dialogue.add_message(role, content.replace(chr(10), '<br>'), stamp)
+        return
         align = 'right' if role == 'Вы' else 'left'
         bg = '#214d72' if role == 'Вы' else '#202936'
         side = 'right' if role == 'Вы' else 'left'
@@ -625,7 +640,7 @@ class Window(QMainWindow):
             self.history = self.history[-100:]
             if self.store.config.get("history", True):
                 self.store.write("history.json", self.history)
-            self.chat_db.add(self.chat_name, role, text, self.history[-1]['time'])
+                self.chat_db.add(self.chat_name, role, text, self.history[-1]['time'])
 
     def refresh_chat_sections(self):
         if not hasattr(self, 'chat_select'): return
@@ -642,18 +657,25 @@ class Window(QMainWindow):
         self.chat_panel.setVisible(not self.chat_panel.isVisible())
 
     def switch_chat(self, name):
-        if name: self.chat_name = name
+        if not name or self.busy.is_set(): return
+        self.chat_name = name
+        self.history = self.chat_db.messages(name)
+        self.dialogue.clear()
+        for item in self.history: self.render_message(item['role'], item['text'], item['time'])
+        self.engine.chat = [{'role':'user' if item['role']=='Вы' else 'assistant', 'content':item['text']} for item in self.history[-12:] if item['role'] in ('Вы','Пятница')]
+        self.engine.screen_context = ''
 
     def add_chat(self):
+        if self.busy.is_set(): return
         name, ok = W.QInputDialog.getText(self, 'Новый раздел', 'Название раздела:')
         if ok and name.strip():
-            self.chat_db.add(name.strip(), 'system', '', datetime.now().isoformat()); self.chat_name=name.strip(); self.refresh_chat_sections()
+            self.chat_db.add(name.strip(), 'system', '', datetime.now().isoformat()); self.switch_chat(name.strip()); self.refresh_chat_sections()
 
     def delete_chat(self):
-        if self.chat_name == 'Общая': return
-        import sqlite3
-        with sqlite3.connect(self.chat_db.path) as db: db.execute('DELETE FROM chats WHERE name=?',(self.chat_name,))
-        self.chat_name='Общая'; self.refresh_chat_sections()
+        if self.chat_name == 'Общая' or self.busy.is_set(): return
+        if QMessageBox.question(self, 'Удаление чата', 'Удалить этот чат и его сообщения?') != QMessageBox.StandardButton.Yes: return
+        self.chat_db.delete(self.chat_name)
+        self.switch_chat('Общая'); self.refresh_chat_sections()
 
     def search_chats(self):
         query=self.chat_query.text().strip()
@@ -890,8 +912,12 @@ class Window(QMainWindow):
         self.maintenance_pending = False
 
     def clear_history(self):
+        if self.busy.is_set(): return
+        self.chat_db.delete(self.chat_name)
+        self.chat_db.add(self.chat_name, 'system', '', datetime.now().isoformat())
         self.history = []
         self.engine.chat.clear()
+        self.engine.screen_context = ''
         self.store.write("history.json", [])
         self.dialogue.clear()
 

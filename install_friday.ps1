@@ -4,7 +4,7 @@ $zip = Join-Path $env:TEMP 'Friday-Portable.zip'
 $url = 'https://github.com/happyfox102/---------------/releases/latest/download/Friday-Portable.zip'
 Write-Host 'Скачивание Пятницы...'
 Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
-if (Test-Path $app) { Remove-Item $app -Recurse -Force }
+# Preserve existing settings, history and Windows-protected credentials.
 New-Item $app -ItemType Directory -Force | Out-Null
 Expand-Archive $zip -DestinationPath $app -Force
 $exe = Get-ChildItem $app -Filter 'Пятница.exe' -Recurse | Select-Object -First 1
