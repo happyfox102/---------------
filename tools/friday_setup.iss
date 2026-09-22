@@ -42,7 +42,9 @@ Source: "{#Bundle}\Пятница.exe"; DestDir: "{app}"; Flags: ignoreversion; 
 Source: "{#Bundle}\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "{#Bundle}\models\vosk-model-small-ru-0.22\*"; DestDir: "{app}\models\vosk-model-small-ru-0.22"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "{#Bundle}\runtime\ollama\*"; DestDir: "{app}\runtime\ollama"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ollama
-Source: "{#Bundle}\models\ollama\*"; DestDir: "{app}\models\ollama"; Excludes: "*-partial*,*.lock"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: ollama
+; The Qwen model is intentionally not bundled: it is ~2.5 GB and exceeds
+; GitHub's 2 GB release-asset limit. The optional Ollama runtime is included;
+; users can install a model after setup from Ollama.
 
 [Icons]
 Name: "{userdesktop}\{#AppName}"; Filename: "{app}\Пятница.exe"; WorkingDir: "{app}"
@@ -64,9 +66,9 @@ hy.Custom=Բաղադրիչների ընտրություն
 ru.Core=Пятница, библиотеки и распознавание речи Vosk
 en.Core=Friday, libraries and Vosk speech recognition
 hy.Core=Ուրբաթ, գրադարաններ և Vosk խոսքի ճանաչում
-ru.LocalAI=Ollama и локальная модель Qwen (около 3 ГБ)
-en.LocalAI=Ollama and local Qwen model (about 3 GB)
-hy.LocalAI=Ollama և տեղային Qwen մոդել (մոտ 3 ԳԲ)
+ru.LocalAI=Ollama (локальный движок; модель устанавливается отдельно)
+en.LocalAI=Ollama (local engine; install a model separately)
+hy.LocalAI=Ollama (տեղային շարժիչ․ մոդելը տեղադրվում է առանձին)
 ru.Launch=Запустить Пятницу
 en.Launch=Launch Friday
 hy.Launch=Գործարկել Ուրբաթը
