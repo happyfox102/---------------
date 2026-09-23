@@ -377,6 +377,23 @@ class Engine:
         if match:
             self.office.change("write", match[2], match[1])
             return f"Записано в {cell_address(match[2])}. Книга сохранена."
+        # Natural-language aliases for common spreadsheet requests. The AI is
+        # still available for complex questions, while these safe operations
+        # remain deterministic and do not send workbook contents to a server.
+        match = re.fullmatch(r".*(?:сумм|итог).*?(?:из|диапазон)\s+([A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+).*?(?:в|ячейк[ау])\s+([A-Za-z]{1,3}\d+)", text, re.I)
+        if match:
+            return self.office.formula(match[2], f"=SUM({match[1].upper()})")
+        match = re.fullmatch(r".*(?:столбц|колонк).*?([A-Za-z]{1,3}).*(?:слож|сумм).*?(?:столбц|колонк).*?([A-Za-z]{1,3}).*?(?:и|,).*?([A-Za-z]{1,3})(?:.*?(?:с|от)\s+(\d+).*?(?:по|до)\s+(\d+))?", text, re.I)
+        if match:
+            target, first, second = match[1], match[2], match[3]
+            start, end = int(match[4] or 2), int(match[5] or 0)
+            return self.office.fill_formula(target, f"=SUM({first.upper()}{start},{second.upper()}{start})", start, end or None)
+        if re.search(r"график|диаграмм", text, re.I):
+            range_match = re.search(r"\b([A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+)\b", text)
+            if range_match:
+                title_match = re.search(r"(?:назван(?:ием|ие)?|именем)\s+(.+)$", text, re.I)
+                kind = "line" if re.search(r"линей|график", text, re.I) else "pie" if re.search(r"круг", text, re.I) else "bar"
+                return self.office.chart(range_match[1], kind, title_match[1] if title_match else "Диаграмма")
         match = re.fullmatch(r"(?:сделай |поставь |запиши )?(?:сумму|итого) из ([A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+) в ([A-Za-z]{1,3}\d+)", text, re.I)
         if match:
             return self.office.formula(match[2], f"=SUM({match[1].upper()})")

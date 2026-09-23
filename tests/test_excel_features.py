@@ -6,6 +6,7 @@ from openpyxl import load_workbook
 
 from friday.office import Office
 from friday.storage import Store
+from friday.engine import Engine
 
 
 class ExcelFeaturesTests(unittest.TestCase):
@@ -23,6 +24,17 @@ class ExcelFeaturesTests(unittest.TestCase):
             self.assertEqual(book.active["C2"].value, "=SUM(B2:B2)")
             self.assertEqual(len(book.active._charts), 1)
             book.close()
+
+    def test_plain_language_commands(self):
+        with tempfile.TemporaryDirectory() as temp:
+            engine = Engine(Store(Path(temp)))
+            engine.office.create("excel", "plain-language")
+            for row in range(2, 5):
+                engine.office.change("write", f"A{row}", str(row))
+                engine.office.change("write", f"B{row}", str(row * 10))
+            self.assertIn("Формула записана", engine.execute("посчитай сумму из A2:A4 в C2"))
+            self.assertIn("Формула заполнена", engine.execute("в столбце D сложи столбцы A и B с 2 по 4"))
+            self.assertIn("Диаграмма создана", engine.execute("построй линейный график по A1:B4 с названием Продажи"))
 
 
 if __name__ == "__main__":
