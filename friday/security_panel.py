@@ -54,6 +54,7 @@ class SecurityPanel(W.QWidget):
         self.reports.setRootIsDecorated(False)
         self.reports.setAlternatingRowColors(True)
         self.reports.header().setSectionResizeMode(3, W.QHeaderView.ResizeMode.Stretch)
+        self.reports.itemDoubleClicked.connect(self.open_report_item)
         layout.addWidget(self.reports, 1)
         self.report_stamp = None
 
@@ -83,8 +84,21 @@ class SecurityPanel(W.QWidget):
             detail = row.get('reason') or row.get('app') or row.get('file') or ''
             if row.get('restricted'):
                 detail += ' · вне списка; запуск наблюдался, блокировка не выполнялась'
-            self.reports.addTopLevelItem(W.QTreeWidgetItem([row.get('time','').replace('T',' '),
-                labels.get(row.get('kind'),row.get('kind','')), outcomes.get(row.get('outcome','observed'),row.get('outcome','')), detail]))
+            item = W.QTreeWidgetItem([row.get('time','').replace('T',' '),
+                labels.get(row.get('kind'),row.get('kind','')), outcomes.get(row.get('outcome','observed'),row.get('outcome','')), detail])
+            if row.get('file'):
+                item.setData(0, C.Qt.ItemDataRole.UserRole, str(self.service.shots / row['file']))
+                item.setToolTip(3, 'Двойной щелчок — открыть снимок')
+            self.reports.addTopLevelItem(item)
+
+    def open_report_item(self, item, _column):
+        path = item.data(0, C.Qt.ItemDataRole.UserRole)
+        if path and Path(path).is_file():
+            try:
+                import os
+                os.startfile(path)
+            except OSError:
+                pass
 
     def attach_settings(self, dialog, layout):
         layout.addWidget(self.tabs)
