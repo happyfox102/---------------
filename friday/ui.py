@@ -128,7 +128,8 @@ class Settings(QDialog):
         self.security_watch_start = QCheckBox("Включать присмотр при запуске Пятницы")
         self.security_watch_start.setChecked(store.config.get('security_watch_start', False))
         protector_form.addRow(self.security_watch_start)
-        protector_form.addRow(QLabel("Правила охраны, Microsoft Defender, снимки экрана и родительский контроль настраиваются во вкладке «Защитник» главного окна."))
+        parent.security.attach_settings(self, protector_form)
+        self.security_settings = protector
         tabs.addTab(protector, glyph('shield'), 'Защитник')
 
         extra = QWidget()
@@ -240,6 +241,8 @@ class Settings(QDialog):
             url = urlparse(self.ai_url.text().strip())
             if url.scheme not in ("http", "https") or not url.hostname:
                 raise ValueError("Укажите адрес Ollama, например http://127.0.0.1:11434.")
+            if hasattr(self.parent(), 'security') and not self.parent().security.apply_rules():
+                return
             config = self.store.config.copy()
             config.update(self.cloud.values())
             config['language'] = self.language.currentData()
@@ -300,9 +303,7 @@ class Window(QMainWindow):
             self.chat_name = db_rows[0][1]
         self.setWindowTitle("ИИ пятница 1.0 (бета)")
         self.setWindowIcon(icon())
-        self.engine.file_index.refresh()
-        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
-            self.engine.windows.warmup()
+        # Indexes are loaded from cache and refreshed on the first actual search.
         self.resize(1100, 790)
         self.setMinimumSize(840, 600)
         self.build()
@@ -318,7 +319,7 @@ class Window(QMainWindow):
         self.timer.start(1000)
         self.activity_timer = QTimer(self)
         self.activity_timer.timeout.connect(self.update_activity)
-        self.activity_timer.start(200)
+        self.activity_timer.start(500)
         QShortcut(QKeySequence("Ctrl+Space"), self, activated=self.listen_once)
         QShortcut(QKeySequence("Escape"), self, activated=self.stop_audio)
         if not self.history:
@@ -423,10 +424,11 @@ class Window(QMainWindow):
         from .security_panel import SecurityPanel
         self.security = SecurityPanel(self.store, self)
         self.security.message.connect(self.feature_message)
+        self.security.message.connect(lambda text: self.tray.showMessage('Защитник', text[:400], QSystemTrayIcon.MessageIcon.Information, 6000) if hasattr(self,'tray') else None)
         self.security.activeChanged.connect(lambda active: self.tray.setToolTip('Пятница • присмотр активен' if active else 'Пятница'))
         self.tabs.addTab(self.security, glyph('shield'), 'Защитник')
         if self.store.config.get('security_watch_start', False):
-            self.security.toggle_watch()
+            QTimer.singleShot(1500, self.security.toggle_watch)
         from .workspaces_ui import WorkspacesPanel
         self.workspaces = WorkspacesPanel(self.engine)
         self.workspaces.runRequested.connect(self.submit)
@@ -874,6 +876,8 @@ class Window(QMainWindow):
             self.speaker.stop()
 
     def settings(self):
+        if self.security.parental and not self.security.authorize():
+            return
         self.stop_audio()
         Settings(self.store, self).exec()
         provider = self.store.config.get('ai_provider', 'ollama')
@@ -909,7 +913,8 @@ class Window(QMainWindow):
             self.executor.submit(select).add_done_callback(lambda f: self.bus.result.emit(f.result()))
 
     def refresh_panels(self):
-        self.draft.setPlainText(self.engine.draft)
+        if self.draft.toPlainText() != self.engine.draft:
+            self.draft.setPlainText(self.engine.draft)
         path = self.engine.office.path
         self.book_label.setText("Рабочая книга:\n" + path.name if path else "Книга Excel не выбрана")
         self.book_label.setToolTip(str(path) if path else "")
@@ -947,6 +952,9 @@ class Window(QMainWindow):
         self.close()
 
     def closeEvent(self, event):
+        if self.security.parental and not self.security.authorize():
+            event.ignore()
+            return
         if self.recording and self.recording.active:
             self.recording.stop()
             self.status.setText("Сохраняю запись. После сохранения закройте приложение ещё раз.")
@@ -961,6 +969,9 @@ class Window(QMainWindow):
             event.ignore()
             return
         self.quitting = True
+        self.security.timer.stop()
+        if self.security.child_browser:
+            self.security.child_browser.close()
         self.pc.close_services()
         self.hotkey.stop()
         self.timer.stop()

@@ -199,8 +199,12 @@ class Metrics(QObject):
         super().__init__()
         self.cancel = threading.Event()
         self.thread = None
+        self.visible = threading.Event()
 
     def start(self):
+        self.visible.set()
+        if self.thread and self.thread.is_alive():
+            return
         self.thread = threading.Thread(target=self.run, daemon=True, name="pc-metrics")
         self.thread.start()
 
@@ -223,7 +227,9 @@ class Metrics(QObject):
         previous_disk = psutil.disk_io_counters()
         previous_time = time.monotonic()
         try:
-            while not self.cancel.wait(2):
+            while not self.cancel.wait(5):
+                if not self.visible.is_set():
+                    continue
                 memory = psutil.virtual_memory()
                 now = time.monotonic(); interval = max(.1, now - previous_time)
                 net = psutil.net_io_counters(); disk = psutil.disk_io_counters()

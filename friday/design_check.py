@@ -90,7 +90,10 @@ def run():
             assert not w.recording.stop_button.isEnabled()
             w.recording.progress.loading(True); w.recording.fail('Учебная ошибка')
             # No source was opened by this check.
-            w.close(); w.engine.file_index.thread.join(10); w.speaker.thread.join(3); app.processEvents()
+            w.close()
+            if w.engine.file_index.thread:
+                w.engine.file_index.thread.join(10)
+            w.speaker.thread.join(3); app.processEvents()
             report['ok'] = True
     except Exception:
         import traceback

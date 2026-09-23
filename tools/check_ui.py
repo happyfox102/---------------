@@ -67,7 +67,8 @@ def main():
             feedback.assert_called_with(False)
         window.close()
         window.speaker.thread.join(2)
-        window.engine.file_index.thread.join(10)
+        if window.engine.file_index.thread:
+            window.engine.file_index.thread.join(10)
         app.processEvents()
     print(f"UI OK ({BINDING}): command worker, Excel, reminders, settings, screenshots.")
 

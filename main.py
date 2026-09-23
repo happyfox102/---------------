@@ -10,6 +10,9 @@ from logging.handlers import RotatingFileHandler
 
 
 def main():
+    if "--self-test-security" in sys.argv:
+        from friday.security_check import run
+        return run()
     if "--self-test-design" in sys.argv:
         from friday.design_check import run
         return run()
@@ -19,7 +22,8 @@ def main():
     if "--self-test" in sys.argv:
         from friday.bundle_check import run
         return run()
-    from friday.qt import QApplication, QMessageBox, QLocalServer, QLocalSocket
+    from friday.qt import QApplication, QMessageBox, QLocalServer, QLocalSocket, Qt
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     from friday.storage import Store
     from friday.ui import STYLE, Window
     app = QApplication(sys.argv)

@@ -27,6 +27,7 @@ class FileIndex:
             self.roots = cache.get("roots", [])
             self.entries = cache.get("entries", [])
             self.ready = True
+            self.updated = time.monotonic()
 
     def refresh(self, force=False):
         roots = sorted({str(Path(p).expanduser().absolute()) for p in self.store.config.get("search_roots", []) if Path(p).is_dir()})
@@ -52,6 +53,8 @@ class FileIndex:
                     if identity in seen:
                         continue
                     seen.add(identity)
+                    if len(seen) % 100 == 0:
+                        time.sleep(.02)
                     entries.append([str(folder), "folder", key(folder.name), key(folder.name)])
                     try:
                         with os.scandir(folder) as children:

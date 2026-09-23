@@ -146,8 +146,15 @@ class PCPanel(W.QWidget):
         self.job_progress = LoadingBar(); layout.addWidget(self.job_progress)
         self.job_status = W.QLabel("Без выбора в таблице оптимизируются подходящие фоновые приложения. Активное окно исключается.")
         self.job_status.setWordWrap(True); layout.addWidget(self.job_status)
+
+    def showEvent(self, event):
+        super().showEvent(event)
         if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
             self.metrics.start()
+
+    def hideEvent(self, event):
+        self.metrics.visible.clear()
+        super().hideEvent(event)
 
     def show_page(self, key):
         self.tabs.setCurrentWidget(self.pages[key][0])
