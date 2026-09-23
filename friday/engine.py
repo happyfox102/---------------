@@ -377,6 +377,21 @@ class Engine:
         if match:
             self.office.change("write", match[2], match[1])
             return f"Записано в {cell_address(match[2])}. Книга сохранена."
+        match = re.fullmatch(r"(?:сделай |поставь |запиши )?(?:сумму|итого) из ([A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+) в ([A-Za-z]{1,3}\d+)", text, re.I)
+        if match:
+            return self.office.formula(match[2], f"=SUM({match[1].upper()})")
+        match = re.fullmatch(r"(?:сделай |рассчитай )?(?:сумму|итого) из столбцов? ([A-Za-z]{1,3}) и ([A-Za-z]{1,3}) в столбец ([A-Za-z]{1,3})(?: с (\d+) по (\d+))?", text, re.I)
+        if match:
+            start, end = int(match[4] or 2), int(match[5] or 0)
+            expression = f"=SUM({match[1].upper()}{start},{match[2].upper()}{start})"
+            return self.office.fill_formula(match[3], expression, start, end or None)
+        match = re.fullmatch(r"(?:создай|сделай) (?:диаграмму|график)(?: (столбчатую|линейную|круговую))? из ([A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+)(?: с названием (.+))?", text, re.I)
+        if match:
+            kind = {"столбчатую": "bar", "линейную": "line", "круговую": "pie"}.get((match[1] or "").lower(), "bar")
+            return self.office.chart(match[2], kind, match[3] or "Диаграмма")
+        match = re.fullmatch(r"запиши формулу (.+) в ([A-Za-z]{1,3}\d+)", text, re.I)
+        if match:
+            return self.office.formula(match[2], match[1])
         if cmd in ("добавить ячейку", "добавь ячейку", "заменить ячейку"):
             self.pending = {"kind": "cell", "expires": self.clock() + 120}
             return "В какую ячейку записать? Например B3."
