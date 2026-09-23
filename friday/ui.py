@@ -124,6 +124,13 @@ class Settings(QDialog):
         form.addRow(self.history)
         tabs.addTab(files, glyph("folder"), "Файлы")
 
+        protector = QWidget(); protector_form = QFormLayout(protector)
+        self.security_watch_start = QCheckBox("Включать присмотр при запуске Пятницы")
+        self.security_watch_start.setChecked(store.config.get('security_watch_start', False))
+        protector_form.addRow(self.security_watch_start)
+        protector_form.addRow(QLabel("Правила охраны, Microsoft Defender, снимки экрана и родительский контроль настраиваются во вкладке «Защитник» главного окна."))
+        tabs.addTab(protector, glyph('shield'), 'Защитник')
+
         extra = QWidget()
         form = QFormLayout(extra)
         from .ai_settings import AISettings
@@ -241,8 +248,8 @@ class Settings(QDialog):
                           vosk_model=self.vosk.text().strip(), whisper_model=self.whisper.text().strip(),
                           wake_word=self.wake.text().strip().lower(), search_roots=roots, apps=apps,
                           scenarios=scenarios, ollama_url=self.ai_url.text().strip(), ollama_model=self.ai_model.text().strip(),
-                          history=self.history.isChecked(), design=self.appearance.config(), chat_panel_side=self.chat_side.currentData(),
-                          web_enabled=self.web_enabled.isChecked(), web_auto=self.web_auto.isChecked())
+                           history=self.history.isChecked(), design=self.appearance.config(), chat_panel_side=self.chat_side.currentData(),
+                           web_enabled=self.web_enabled.isChecked(), web_auto=self.web_auto.isChecked(), security_watch_start=self.security_watch_start.isChecked())
             self.cloud.save_secret()
             self.store.save_config(config)
             apply_theme(QApplication.instance(), config)
@@ -413,6 +420,13 @@ class Window(QMainWindow):
         from .vpn_panel import VPNPanel
         self.vpn = VPNPanel(self.store)
         self.tabs.addTab(self.vpn, glyph("globe"), "VPN")
+        from .security_panel import SecurityPanel
+        self.security = SecurityPanel(self.store, self)
+        self.security.message.connect(self.feature_message)
+        self.security.activeChanged.connect(lambda active: self.tray.setToolTip('Пятница • присмотр активен' if active else 'Пятница'))
+        self.tabs.addTab(self.security, glyph('shield'), 'Защитник')
+        if self.store.config.get('security_watch_start', False):
+            self.security.toggle_watch()
         from .workspaces_ui import WorkspacesPanel
         self.workspaces = WorkspacesPanel(self.engine)
         self.workspaces.runRequested.connect(self.submit)
@@ -690,6 +704,14 @@ class Window(QMainWindow):
             self.submit(text)
 
     def submit(self, text):
+        if hasattr(self, 'security'):
+            security_result = self.security.command(text)
+            if security_result:
+                self.append('Вы', text)
+                self.append('Пятница', security_result)
+                self.speaker.say(security_result)
+                self.tabs.setCurrentWidget(self.security)
+                return
         if text.casefold().strip(' .!') in ('остановись','останови задачу','стоп задача','пятница остановись'):
             self.engine.operator.stop()
             self.ai_state.setToolTip('Останавливаю задачу'); return
